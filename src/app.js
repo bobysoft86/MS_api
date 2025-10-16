@@ -31,16 +31,12 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/health", (_, res) => res.json({ ok: true }));
 app.use("/auth", authRoutes);
 app.use("/exercises", exercisesRoutes);
-// app.use('/sessions', (req, res, next) => {
-//   console.log('> SESSIONS HIT', req.method, req.path, 'ct=', req.headers['content-type']);
-//   console.log('> BODY typeof=', typeof req.body, 'body=', req.body);
-//   next();
-// }, sessionsRoutes);
 app.use("/sessions", sessionsRoutes);
 app.use("/session-types", sessionTypesRoutes);
 app.use("/exercise-types", exerciseTypesRoutes);
 app.use("/users", usersRoutes);
 app.use("/", creditsRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "..", (process.env.UPLOAD_DIR || "uploads"))));
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`API escuchando en http://localhost:${PORT}`));

@@ -3,6 +3,8 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
+const ROOT = path.resolve(__dirname, "..", "..");
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -10,12 +12,9 @@ const IMAGE_MIME = new Set(["image/jpeg","image/png","image/webp","image/gif"]);
 const VIDEO_MIME = new Set(["video/mp4","video/webm","video/quicktime","video/x-matroska"]);
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || "uploads";
-
-// carpetas relativas a la raíz del proyecto (…/MS_api/uploads)
-const UPLOAD_ABS = path.join(__dirname, "..", UPLOAD_DIR);
+const UPLOAD_ABS = path.join(ROOT, UPLOAD_DIR);  
 const IMG_ABS    = path.join(UPLOAD_ABS, "images");
 const VID_ABS    = path.join(UPLOAD_ABS, "videos");
-
 // asegurar carpetas
 for (const dir of [UPLOAD_ABS, IMG_ABS, VID_ABS]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
