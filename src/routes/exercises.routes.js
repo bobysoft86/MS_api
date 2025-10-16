@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { authRequired, requireRole } from "../middlewares/auth.middleware.js";
-import { uploadExerciseMedia, fileToPaths, multerErrorHandler } from "../middlewares/upload.middleweare.js";
-import {
+import { uploadExerciseMedia, fileToPaths, multerErrorHandler } from "../middlewares/upload.middleware.js";import {
   listExercises,
   deleteExercise,  
   getExercise,
