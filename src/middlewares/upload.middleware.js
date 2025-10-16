@@ -3,22 +3,18 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
-/** 1) Primero __filename/__dirname */
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
-
-/** 2) Raíz del proyecto: .../MS_api */
-const ROOT = path.resolve(__dirname, "..", "..");
+/** Resuelve raíz del proyecto sin __dirname */
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /** Config */
 const IMAGE_MIME = new Set(["image/jpeg","image/png","image/webp","image/gif"]);
 const VIDEO_MIME = new Set(["video/mp4","video/webm","video/quicktime","video/x-matroska"]);
 const UPLOAD_DIR = process.env.UPLOAD_DIR || "uploads";
 
-/** 3) Paths ABSOLUTOS (fuera de src/) */
+/** Paths absolutos */
 const UPLOAD_ABS = path.join(ROOT, UPLOAD_DIR);
-const IMG_ABS    = path.join(UPLOAD_ABS, "images");
-const VID_ABS    = path.join(UPLOAD_ABS, "videos");
+const IMG_ABS = path.join(UPLOAD_ABS, "images");
+const VID_ABS = path.join(UPLOAD_ABS, "videos");
 
 /** Asegurar carpetas */
 for (const dir of [UPLOAD_ABS, IMG_ABS, VID_ABS]) {
@@ -30,7 +26,7 @@ for (const dir of [UPLOAD_ABS, IMG_ABS, VID_ABS]) {
 function safeName(original) {
   const ext  = (path.extname(original) || "").toLowerCase();
   const base = (path.basename(original, ext) || "file")
-    .toLowerCase().replace(/[^a-z0-9_-]+/g, "-").slice(0, 60) || "file";
+    .toLowerCase().replace(/[^a-z0-9_-]+/g, "-").slice(0, 60);
   const unique = Date.now() + "-" + Math.random().toString(36).slice(2, 8);
   return `${base}-${unique}${ext || ".bin"}`;
 }
@@ -39,24 +35,23 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (IMAGE_MIME.has(file.mimetype)) return cb(null, IMG_ABS);
     if (VIDEO_MIME.has(file.mimetype)) return cb(null, VID_ABS);
-    return cb(new Error("UNSUPPORTED_MIME"));
+    cb(new Error("UNSUPPORTED_MIME"));
   },
   filename: (req, file, cb) => cb(null, safeName(file.originalname))
 });
 
-function fileFilter(req, file, cb) {
+const fileFilter = (req, file, cb) => {
   if (IMAGE_MIME.has(file.mimetype) || VIDEO_MIME.has(file.mimetype)) return cb(null, true);
-  return cb(new Error("UNSUPPORTED_MIME"));
-}
+  cb(new Error("UNSUPPORTED_MIME"));
+};
 
 const MAX_IMAGE_MB = Number(process.env.MAX_IMAGE_MB || 5);
 const MAX_VIDEO_MB = Number(process.env.MAX_VIDEO_MB || 200);
 const upload = multer({ storage, fileFilter, limits: { fileSize: Math.max(MAX_IMAGE_MB, MAX_VIDEO_MB) * 1024 * 1024 } });
 
 function relFromAbs(absPath) {
-  // /.../MS_api/uploads/images/a.jpg -> /uploads/images/a.jpg
   const rel = path.relative(ROOT, absPath).replace(/\\/g, "/");
-  return `/${rel.startsWith(UPLOAD_DIR) ? rel : `${UPLOAD_DIR}/${rel}`}`;
+  return `/${UPLOAD_DIR}/${rel.split(UPLOAD_DIR + "/").pop()}`;
 }
 
 export function publicUrl(rel) {
