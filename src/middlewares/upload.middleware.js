@@ -3,11 +3,11 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
-/** 1) PRIMERO define __filename/__dirname */
+/** 1) Primero __filename/__dirname */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
-/** 2) Raíz del proyecto: .../MS_api (sube dos niveles desde src/middlewares/) */
+/** 2) Raíz del proyecto: .../MS_api */
 const ROOT = path.resolve(__dirname, "..", "..");
 
 /** Config */
@@ -15,12 +15,12 @@ const IMAGE_MIME = new Set(["image/jpeg","image/png","image/webp","image/gif"]);
 const VIDEO_MIME = new Set(["video/mp4","video/webm","video/quicktime","video/x-matroska"]);
 const UPLOAD_DIR = process.env.UPLOAD_DIR || "uploads";
 
-/** 3) Paths ABSOLUTOS (NO guardar en src/uploads) */
+/** 3) Paths ABSOLUTOS (fuera de src/) */
 const UPLOAD_ABS = path.join(ROOT, UPLOAD_DIR);
 const IMG_ABS    = path.join(UPLOAD_ABS, "images");
 const VID_ABS    = path.join(UPLOAD_ABS, "videos");
 
-/** Asegurar carpetas sin romper el arranque */
+/** Asegurar carpetas */
 for (const dir of [UPLOAD_ABS, IMG_ABS, VID_ABS]) {
   try { fs.mkdirSync(dir, { recursive: true }); } catch (e) {
     console.error("[upload] mkdir fail:", dir, e?.message);
