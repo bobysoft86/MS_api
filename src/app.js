@@ -5,10 +5,10 @@ import { fileURLToPath } from "url";
 
 // 1) primero __dirname
 const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
+
 
 // 2) raíz del proyecto: .../MS_api (no en src)
-const ROOT = path.resolve(__dirname, "..", "..");
+const ROOT = path.resolve(__filename, "..", "..");
 
 const IMAGE_MIME = new Set(["image/jpeg","image/png","image/webp","image/gif"]);
 const VIDEO_MIME = new Set(["video/mp4","video/webm","video/quicktime","video/x-matroska"]);
