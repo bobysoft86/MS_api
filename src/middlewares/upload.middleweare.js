@@ -57,7 +57,7 @@ export const uploadExerciseMedia = upload.fields([
 
 export function buildPublicUrl(localPath) {
   if (!localPath) return null;
-  const base = process.env.BASE_URL?.replace(/\/+$/, "") || "http://localhost:3000";
+  const base = process.env.BASE_URL?.replace(/\/+$/, "") || "http://45.147.251.120";
   return `${base}/${localPath.replace(/^\.?\/*/, "")}`;
 }
 
