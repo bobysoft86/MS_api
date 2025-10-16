@@ -1,42 +1,83 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import authRoutes from "./routes/auth.routes.js";
-import exercisesRoutes from "./routes/exercises.routes.js";
-import sessionsRoutes from "./routes/sessions.routes.js";
-import sessionTypesRoutes from "./routes/sessionTypes.routes.js";
-import exerciseTypesRoutes from "./routes/exerciseTypes.routes.js";
-import usersRoutes from "./routes/users.routes.js";
-import creditsRoutes from "./routes/credits.routes.js";
+import multer from "multer";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 
-dotenv.config();
-const app = express();
+// 1) primero __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadDir = process.env.UPLOAD_DIR || "uploads";
-const allowed = (process.env.CORS_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
-app.set("trust proxy", 1);
-app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin || allowed.length === 0 || allowed.includes(origin)) return cb(null, true);
-    return cb(new Error("Not allowed by CORS"));
+// 2) raíz del proyecto: .../MS_api (no en src)
+const ROOT = path.resolve(__dirname, "..", "..");
+
+const IMAGE_MIME = new Set(["image/jpeg","image/png","image/webp","image/gif"]);
+const VIDEO_MIME = new Set(["video/mp4","video/webm","video/quicktime","video/x-matroska"]);
+const UPLOAD_DIR = process.env.UPLOAD_DIR || "uploads";
+
+// 3) paths ABSOLUTOS reales
+const UPLOAD_ABS = path.join(ROOT, UPLOAD_DIR);
+const IMG_ABS    = path.join(UPLOAD_ABS, "images");
+const VID_ABS    = path.join(UPLOAD_ABS, "videos");
+
+// asegurar carpetas
+for (const dir of [UPLOAD_ABS, IMG_ABS, VID_ABS]) {
+  try { fs.mkdirSync(dir, { recursive: true }); } catch (e) {
+    console.error("[upload] mkdir fail:", dir, e?.message);
+  }
+}
+
+function safeName(original) {
+  const ext  = (path.extname(original) || "").toLowerCase();
+  const base = (path.basename(original, ext) || "file")
+    .toLowerCase().replace(/[^a-z0-9_-]+/g, "-").slice(0, 60) || "file";
+  const unique = Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+  return `${base}-${unique}${ext || ".bin"}`;
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    if (IMAGE_MIME.has(file.mimetype)) return cb(null, IMG_ABS);
+    if (VIDEO_MIME.has(file.mimetype)) return cb(null, VID_ABS);
+    return cb(new Error("UNSUPPORTED_MIME"));
   },
-  credentials: true
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+  filename: (req, file, cb) => cb(null, safeName(file.originalname))
+});
 
-app.get("/health", (_, res) => res.json({ ok: true }));
-app.use("/auth", authRoutes);
-app.use("/exercises", exercisesRoutes);
-app.use("/sessions", sessionsRoutes);
-app.use("/session-types", sessionTypesRoutes);
-app.use("/exercise-types", exerciseTypesRoutes);
-app.use("/users", usersRoutes);
-app.use("/", creditsRoutes);
-app.use("/uploads", express.static(path.join(__dirname, "..", (process.env.UPLOAD_DIR || "uploads"))));
+function fileFilter(req, file, cb) {
+  if (IMAGE_MIME.has(file.mimetype) || VIDEO_MIME.has(file.mimetype)) return cb(null, true);
+  return cb(new Error("UNSUPPORTED_MIME"));
+}
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`API escuchando en http://localhost:${PORT}`));
+const MAX_IMAGE_MB = Number(process.env.MAX_IMAGE_MB || 5);
+const MAX_VIDEO_MB = Number(process.env.MAX_VIDEO_MB || 200);
+const upload = multer({ storage, fileFilter, limits: { fileSize: Math.max(MAX_IMAGE_MB, MAX_VIDEO_MB) * 1024 * 1024 } });
+
+function relFromAbs(absPath) {
+  // /.../MS_api/uploads/images/a.jpg -> /uploads/images/a.jpg
+  const rel = path.relative(ROOT, absPath).replace(/\\/g, "/");
+  return `/${rel.startsWith(UPLOAD_DIR) ? rel : `${UPLOAD_DIR}/${rel}`}`;
+}
+
+export function publicUrl(rel) {
+  if (!rel) return null;
+  const clean = rel.startsWith("/") ? rel : `/${rel}`;
+  const base = process.env.PUBLIC_BASE_URL?.replace(/\/+$/,"");
+  return base ? `${base}${clean}` : clean;
+}
+
+export function fileToPaths(file) {
+  if (!file) return { rel: null, url: null };
+  const rel = relFromAbs(file.path);
+  return { rel, url: publicUrl(rel) };
+}
+
+export const uploadExerciseMedia = upload.fields([
+  { name: "image", maxCount: 1 },
+  { name: "video", maxCount: 1 }
+]);
+
+export function multerErrorHandler(err, req, res, next) {
+  if (err?.message === "UNSUPPORTED_MIME") return res.status(400).json({ error: "Tipo de archivo no soportado" });
+  if (err && err.name === "MulterError")  return res.status(400).json({ error: err.message });
+  next(err);
+}
