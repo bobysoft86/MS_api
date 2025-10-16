@@ -16,9 +16,8 @@ const app = express();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadDir = process.env.UPLOAD_DIR || "uploads";
-
-
 const allowed = (process.env.CORS_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
+app.set("trust proxy", 1);
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin || allowed.length === 0 || allowed.includes(origin)) return cb(null, true);
@@ -42,7 +41,6 @@ app.use("/session-types", sessionTypesRoutes);
 app.use("/exercise-types", exerciseTypesRoutes);
 app.use("/users", usersRoutes);
 app.use("/", creditsRoutes);
-app.use("/uploads", express.static(path.join(__dirname, "..", uploadDir)));
-
+app.use("/uploads", express.static(path.join(__dirname, "..", (process.env.UPLOAD_DIR || "uploads"))));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`API escuchando en http://localhost:${PORT}`));
